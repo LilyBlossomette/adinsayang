@@ -2,8 +2,8 @@
 // Syarat: nama file harus urut → foto1.jpg, foto2.jpg, foto3.jpg, dst.
 // Ganti MAX_CHECK kalau foto kamu lebih dari 50.
 const MAX_CHECK = 50;
-const PHOTO_FOLDER = 'photos/';
-const PHOTO_PREFIX = 'foto';
+const PHOTO_FOLDER = 'image/';
+const PHOTO_PREFIX = 'image';
 const PHOTO_EXT = '.jpg'; // ganti ke '.png' / '.jpeg' kalau formatnya beda
 
 let placeholderPhotos = []; // diisi otomatis setelah deteksi selesai
