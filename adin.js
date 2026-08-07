@@ -1,8 +1,10 @@
 const MAX_CHECK = 50;
 const PHOTO_FOLDER = 'image/';
 const PHOTO_PREFIX = 'image';
-const PHOTO_EXT = '.jpg'; 
-let placeholderPhotos = []; 
+const PHOTO_EXT = '.jpg';
+let placeholderPhotos = [];
+
+const FRONT_CHANCE = 0.4;
 
 function detectPhotos(){
   return new Promise((resolve) => {
@@ -32,8 +34,10 @@ function detectPhotos(){
   });
 }
 
-const colLeft = document.getElementById('colLeft');
-const colRight = document.getElementById('colRight');
+const colLeftBack = document.getElementById('colLeftBack');
+const colRightBack = document.getElementById('colRightBack');
+const colLeftFront = document.getElementById('colLeftFront');
+const colRightFront = document.getElementById('colRightFront');
 
 let photoIndex = 0;
 function nextPhoto(){
@@ -44,20 +48,23 @@ function nextPhoto(){
 
 function getLaneConfig(){
   const w = window.innerWidth;
-  if(w <= 420) return { lanes: 2, perLane: 2, bubbleMin: 42, bubbleMax: 60 };
-  if(w <= 640) return { lanes: 2, perLane: 2, bubbleMin: 48, bubbleMax: 70 };
-  if(w <= 900) return { lanes: 3, perLane: 2, bubbleMin: 55, bubbleMax: 80 };
-  return { lanes: 4, perLane: 2, bubbleMin: 60, bubbleMax: 100 };
+  if(w <= 420) return { lanes: 2, perLane: 2, bubbleMin: 62, bubbleMax: 88 };
+  if(w <= 640) return { lanes: 2, perLane: 2, bubbleMin: 72, bubbleMax: 100 };
+  if(w <= 900) return { lanes: 3, perLane: 2, bubbleMin: 80, bubbleMax: 115 };
+  return { lanes: 4, perLane: 2, bubbleMin: 90, bubbleMax: 140 };
 }
 
-function buildColumn(col){
-  col.innerHTML = '';
+function buildSide(colWidthSource, frontEl, backEl){
+  frontEl.innerHTML = '';
+  backEl.innerHTML = '';
+
   const cfg = getLaneConfig();
-  const colWidth = col.clientWidth || 180;
+  const colWidth = colWidthSource.clientWidth || 180;
   const laneWidth = colWidth / cfg.lanes;
+  const slotWidth = laneWidth / cfg.perLane;
 
   for(let laneIndex = 0; laneIndex < cfg.lanes; laneIndex++){
-    const duration = 14 + Math.random() * 10; 
+    const duration = 14 + Math.random() * 10;
     const rot = (Math.random() * 10 - 5).toFixed(1);
     const sway = (14 + Math.random() * 18).toFixed(0);
 
@@ -67,34 +74,43 @@ function buildColumn(col){
     for(let n = 0; n < cfg.perLane; n++){
       const depth = Math.random();
       const width = Math.round(minWidth + depth * (maxWidth - minWidth));
-      const leftMax = Math.max(0, laneWidth - width - 6);
-      const left = laneIndex * laneWidth + 3 + Math.random() * leftMax;
+      const slotStart = laneIndex * laneWidth + n * slotWidth;
+      const jitterRoom = Math.max(0, slotWidth - width);
+      const left = slotStart + Math.random() * jitterRoom;
+
+      const isFront = Math.random() < FRONT_CHANCE;
 
       const el = document.createElement('div');
       el.className = 'polaroid';
       el.style.left = left + 'px';
       el.style.width = width + 'px';
-      el.style.setProperty('--blur', ((1 - depth) * 1.4).toFixed(2) + 'px');
-      el.style.setProperty('--op', (0.55 + depth * 0.4).toFixed(2));
       el.style.setProperty('--rot', rot + 'deg');
       el.style.setProperty('--sway1', sway + 'px');
+      el.style.setProperty('--op', (0.55 + depth * 0.4).toFixed(2));
+
+      if(isFront){
+        el.style.setProperty('--blur', '0px');
+      } else {
+        el.style.setProperty('--blur', ((1 - depth) * 1.4).toFixed(2) + 'px');
+      }
+
       el.style.animationDuration = duration + 's';
-      el.style.animationDelay = (-(duration / cfg.perLane) * n) + 's';
+      el.style.animationDelay = (-(duration / cfg.perLane) * n - Math.random() * 2) + 's';
       el.innerHTML = `<img src="${nextPhoto()}" alt="momen">`;
 
       el.addEventListener('animationiteration', () => {
         el.querySelector('img').src = nextPhoto();
       });
 
-      col.appendChild(el);
+      (isFront ? frontEl : backEl).appendChild(el);
     }
   }
 }
 
 function rebuildColumns(){
   if(placeholderPhotos.length === 0) return;
-  buildColumn(colLeft);
-  buildColumn(colRight);
+  buildSide(colLeftBack, colLeftFront, colLeftBack);
+  buildSide(colRightBack, colRightFront, colRightBack);
 }
 
 let resizeTimer = null;
