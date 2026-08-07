@@ -1,12 +1,12 @@
+// Semua foto otomatis dideteksi dari folder photos/
+// Syarat: nama file harus urut → foto1.jpg, foto2.jpg, foto3.jpg, dst.
+// Ganti MAX_CHECK kalau foto kamu lebih dari 50.
 const MAX_CHECK = 50;
-const PHOTO_FOLDER = 'image/';
-const PHOTO_PREFIX = 'image';
-const PHOTO_EXT = '.jpg';
-let placeholderPhotos = [];
+const PHOTO_FOLDER = 'photos/';
+const PHOTO_PREFIX = 'foto';
+const PHOTO_EXT = '.jpg'; // ganti ke '.png' / '.jpeg' kalau formatnya beda
 
-// Peluang sebuah foto muncul di LAYER DEPAN card (tajam, tanpa blur)
-// Sisanya masuk layer belakang (boleh blur).
-const FRONT_CHANCE = 0.4;
+let placeholderPhotos = []; // diisi otomatis setelah deteksi selesai
 
 function detectPhotos(){
   return new Promise((resolve) => {
@@ -30,114 +30,93 @@ function detectPhotos(){
     }
 
     function finish(){
+      // urutkan sesuai nomor file, biar konsisten
       found.sort((a, b) => a.index - b.index);
       resolve(found.map(f => f.path));
     }
   });
 }
 
-const colLeftBack = document.getElementById('colLeftBack');
-const colRightBack = document.getElementById('colRightBack');
-const colLeftFront = document.getElementById('colLeftFront');
-const colRightFront = document.getElementById('colRightFront');
+const colLeft = document.getElementById('colLeft');
+const colRight = document.getElementById('colRight');
 
 let photoIndex = 0;
+
 function nextPhoto(){
   const src = placeholderPhotos[photoIndex % placeholderPhotos.length];
   photoIndex++;
   return src;
 }
 
-function getLaneConfig(){
-  const w = window.innerWidth;
-  if(w <= 420) return { lanes: 1, perLane: 3, bubbleMin: 56, bubbleMax: 80 };
-  if(w <= 640) return { lanes: 2, perLane: 2, bubbleMin: 65, bubbleMax: 92 };
-  if(w <= 900) return { lanes: 3, perLane: 2, bubbleMin: 80, bubbleMax: 115 };
-  return { lanes: 4, perLane: 2, bubbleMin: 90, bubbleMax: 140 };
+/**
+ * Setiap foto berjalan di "lane" (jalur) horizontal yang tetap miliknya sendiri.
+ * Karena posisi horizontal per lane gak berubah-ubah acak, dan bubble berikutnya
+ * di lane yang sama baru muncul setelah bubble sebelumnya "beres" naik + jeda,
+ * foto gak akan pernah numpuk satu sama lain — baik sesama lane maupun antar lane.
+ */
+function runLane(col, laneIndex, totalLanes){
+  // posisi tiap lane dibagi rata di lebar kolom, dikasih sedikit jitter kecil
+  // (jitter dibatasi supaya gak nyerempet ke lane sebelah)
+  const laneWidth = 100 / totalLanes;
+  const laneCenter = laneWidth * laneIndex + laneWidth / 2;
+  const jitterRange = laneWidth * 0.25;
+
+  function spawnOnce(){
+    const src = nextPhoto();
+    const el = document.createElement('div');
+    el.className = 'polaroid';
+
+    const jitter = (Math.random() * jitterRange * 2 - jitterRange);
+    const left = Math.min(92, Math.max(0, laneCenter + jitter));
+
+    const duration = 13 + Math.random() * 7; // 13-20s naik
+    const depth = 0.3 + Math.random() * 0.7; // depth lebih ke arah "dekat" biar tetap kelihatan jelas
+    const scale = (0.75 + depth * 0.5).toFixed(2);
+    const blur = ((1 - depth) * 1.2).toFixed(2);
+    const opacity = (0.6 + depth * 0.35).toFixed(2);
+    const rot = (Math.random() * 8 - 4).toFixed(1);
+    const sway = (10 + Math.random() * 10).toFixed(0);
+
+    el.style.left = left + '%';
+    el.style.setProperty('--scale', scale);
+    el.style.setProperty('--blur', blur + 'px');
+    el.style.setProperty('--op', opacity);
+    el.style.setProperty('--rot', rot + 'deg');
+    el.style.setProperty('--sway1', sway + 'px');
+    el.style.animationDuration = duration + 's';
+    el.style.animationIterationCount = '1'; // sekali naik, lalu dibuang & diganti bubble baru
+    el.innerHTML = `<img src="${src}" alt="momen">`;
+
+    col.appendChild(el);
+
+    // Setelah bubble ini selesai naik & hilang, baru lane ini boleh spawn bubble berikutnya.
+    // Jeda kecil (gap) ditambahkan supaya ada nafas sebelum bubble baru muncul dari bawah.
+    const gap = 300 + Math.random() * 700;
+    setTimeout(() => {
+      el.remove();
+      spawnOnce();
+    }, duration * 1000 + gap);
+  }
+
+  // delay awal biar tiap lane gak mulai barengan
+  setTimeout(spawnOnce, laneIndex * 700 + Math.random() * 500);
 }
 
-/**
- * Membangun satu sisi (kiri/kanan), lalu mendistribusikan tiap bubble
- * ke elemen kolom depan atau belakang berdasarkan random FRONT_CHANCE.
- * Posisi 'left' dihitung dari slot tetap per-lane supaya foto tidak numpuk.
- */
-function buildSide(colWidthSource, frontEl, backEl){
-  frontEl.innerHTML = '';
-  backEl.innerHTML = '';
-
-  const cfg = getLaneConfig();
-  const colWidth = colWidthSource.clientWidth || 180;
-  const laneWidth = colWidth / cfg.lanes;
-  const slotWidth = laneWidth / cfg.perLane;
-
-  for(let laneIndex = 0; laneIndex < cfg.lanes; laneIndex++){
-    const duration = 14 + Math.random() * 10;
-    const rot = (Math.random() * 10 - 5).toFixed(1);
-    const sway = (14 + Math.random() * 18).toFixed(0);
-
-    const maxWidth = Math.max(24, Math.min(cfg.bubbleMax, laneWidth - 6));
-    const minWidth = Math.min(cfg.bubbleMin, maxWidth);
-
-    for(let n = 0; n < cfg.perLane; n++){
-      const depth = Math.random();
-      const width = Math.round(minWidth + depth * (maxWidth - minWidth));
-
-      // slot tetap per posisi n dalam lane -> mencegah dua foto saling tumpuk
-      const slotStart = laneIndex * laneWidth + n * slotWidth;
-      const jitterRoom = Math.max(0, slotWidth - width);
-      const left = slotStart + Math.random() * jitterRoom;
-
-      const isFront = Math.random() < FRONT_CHANCE;
-
-      const el = document.createElement('div');
-      el.className = 'polaroid';
-      el.style.left = left + 'px';
-      el.style.width = width + 'px';
-      el.style.setProperty('--rot', rot + 'deg');
-      el.style.setProperty('--sway1', sway + 'px');
-      el.style.setProperty('--op', (0.55 + depth * 0.4).toFixed(2));
-
-      if(isFront){
-        // Layer depan: tanpa blur, ditumpuk sedikit lebih besar biar jelas
-        el.style.setProperty('--blur', '0px');
-      } else {
-        // Layer belakang: boleh blur sesuai depth
-        el.style.setProperty('--blur', ((1 - depth) * 1.4).toFixed(2) + 'px');
-      }
-
-      el.style.animationDuration = duration + 's';
-      el.style.animationDelay = (-(duration / cfg.perLane) * n - Math.random() * 2) + 's';
-      el.innerHTML = `<img src="${nextPhoto()}" alt="momen">`;
-
-      el.addEventListener('animationiteration', () => {
-        el.querySelector('img').src = nextPhoto();
-      });
-
-      (isFront ? frontEl : backEl).appendChild(el);
-    }
+function startColumn(col, laneCount){
+  for(let i = 0; i < laneCount; i++){
+    runLane(col, i, laneCount);
   }
 }
 
-function rebuildColumns(){
-  if(placeholderPhotos.length === 0) return;
-  // pakai colLeftBack/colRightBack sebagai referensi lebar (sama dengan front, karena posisi kiri/kanan identik)
-  buildSide(colLeftBack, colLeftFront, colLeftBack);
-  buildSide(colRightBack, colRightFront, colRightBack);
-}
-
-let resizeTimer = null;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(rebuildColumns, 300);
-});
-
+// Deteksi dulu semua foto yang ada, baru mulai animasi
 detectPhotos().then((photos) => {
   placeholderPhotos = photos;
 
   if(placeholderPhotos.length === 0){
-    console.warn('Gak ada foto ditemukan di folder image/. Cek nama file & MAX_CHECK.');
+    console.warn('Gak ada foto ditemukan di folder photos/. Cek nama file & MAX_CHECK.');
     return;
   }
 
-  rebuildColumns();
+  seedColumn(colLeft, 6);
+  seedColumn(colRight, 6);
 });
