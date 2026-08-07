@@ -4,6 +4,8 @@ const PHOTO_PREFIX = 'image';
 const PHOTO_EXT = '.jpg';
 let placeholderPhotos = [];
 
+// Peluang sebuah foto muncul di LAYER DEPAN card (tajam, tanpa blur)
+// Sisanya masuk layer belakang (boleh blur).
 const FRONT_CHANCE = 0.4;
 
 function detectPhotos(){
@@ -48,12 +50,17 @@ function nextPhoto(){
 
 function getLaneConfig(){
   const w = window.innerWidth;
-  if(w <= 420) return { lanes: 2, perLane: 2, bubbleMin: 62, bubbleMax: 88 };
-  if(w <= 640) return { lanes: 2, perLane: 2, bubbleMin: 72, bubbleMax: 100 };
+  if(w <= 420) return { lanes: 1, perLane: 3, bubbleMin: 56, bubbleMax: 80 };
+  if(w <= 640) return { lanes: 2, perLane: 2, bubbleMin: 65, bubbleMax: 92 };
   if(w <= 900) return { lanes: 3, perLane: 2, bubbleMin: 80, bubbleMax: 115 };
   return { lanes: 4, perLane: 2, bubbleMin: 90, bubbleMax: 140 };
 }
 
+/**
+ * Membangun satu sisi (kiri/kanan), lalu mendistribusikan tiap bubble
+ * ke elemen kolom depan atau belakang berdasarkan random FRONT_CHANCE.
+ * Posisi 'left' dihitung dari slot tetap per-lane supaya foto tidak numpuk.
+ */
 function buildSide(colWidthSource, frontEl, backEl){
   frontEl.innerHTML = '';
   backEl.innerHTML = '';
@@ -68,12 +75,14 @@ function buildSide(colWidthSource, frontEl, backEl){
     const rot = (Math.random() * 10 - 5).toFixed(1);
     const sway = (14 + Math.random() * 18).toFixed(0);
 
-    const maxWidth = Math.min(cfg.bubbleMax, laneWidth - 10);
+    const maxWidth = Math.max(24, Math.min(cfg.bubbleMax, laneWidth - 6));
     const minWidth = Math.min(cfg.bubbleMin, maxWidth);
 
     for(let n = 0; n < cfg.perLane; n++){
       const depth = Math.random();
       const width = Math.round(minWidth + depth * (maxWidth - minWidth));
+
+      // slot tetap per posisi n dalam lane -> mencegah dua foto saling tumpuk
       const slotStart = laneIndex * laneWidth + n * slotWidth;
       const jitterRoom = Math.max(0, slotWidth - width);
       const left = slotStart + Math.random() * jitterRoom;
@@ -89,8 +98,10 @@ function buildSide(colWidthSource, frontEl, backEl){
       el.style.setProperty('--op', (0.55 + depth * 0.4).toFixed(2));
 
       if(isFront){
+        // Layer depan: tanpa blur, ditumpuk sedikit lebih besar biar jelas
         el.style.setProperty('--blur', '0px');
       } else {
+        // Layer belakang: boleh blur sesuai depth
         el.style.setProperty('--blur', ((1 - depth) * 1.4).toFixed(2) + 'px');
       }
 
@@ -109,6 +120,7 @@ function buildSide(colWidthSource, frontEl, backEl){
 
 function rebuildColumns(){
   if(placeholderPhotos.length === 0) return;
+  // pakai colLeftBack/colRightBack sebagai referensi lebar (sama dengan front, karena posisi kiri/kanan identik)
   buildSide(colLeftBack, colLeftFront, colLeftBack);
   buildSide(colRightBack, colRightFront, colRightBack);
 }
