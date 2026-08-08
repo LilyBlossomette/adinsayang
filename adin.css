@@ -43,9 +43,9 @@ html, body{ height:100%; overflow:hidden; } /* fixed page, no scroll needed */
 .photo-col.right{ right:2%; }
 
 /* .back mengalir di belakang card (card punya background solid jadi teks tetap kebaca);
-   .front mengalir di atas card, dikasih z-index lebih tinggi dari .card-wrap */
+   .front mengalir di atas card, dikasih z-index jauh lebih tinggi dari .card-wrap */
 .photo-col.back{ z-index:5; }
-.photo-col.front{ z-index:30; }
+.photo-col.front{ z-index:999; }
 
 /* Di layar sempit, kolom foto diperlebar supaya jalur (lane) tetap muat berjajar
    tanpa numpuk, dan dibiarkan sedikit "masuk" ke tengah — bagian yang ketutup
@@ -72,6 +72,7 @@ html, body{ height:100%; overflow:hidden; } /* fixed page, no scroll needed */
   animation-name: floatUp;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+  animation-fill-mode: forwards; /* penting: tahan di keadaan akhir animasi (opacity:0, di luar layar) alih-alih "lompat balik" ke posisi default sebelum dihapus JS */
   filter: blur(var(--blur, 0px));
 }
 @media (max-width:640px){
