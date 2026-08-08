@@ -38,10 +38,14 @@ html, body{ height:100%; overflow:hidden; } /* fixed page, no scroll needed */
   width:180px;
   height:100vh;
   pointer-events:none;
-  z-index:5;
 }
 .photo-col.left{ left:2%; }
 .photo-col.right{ right:2%; }
+
+/* .back mengalir di belakang card (card punya background solid jadi teks tetap kebaca);
+   .front mengalir di atas card, dikasih z-index lebih tinggi dari .card-wrap */
+.photo-col.back{ z-index:5; }
+.photo-col.front{ z-index:30; }
 
 /* Di layar sempit, kolom foto diperlebar supaya jalur (lane) tetap muat berjajar
    tanpa numpuk, dan dibiarkan sedikit "masuk" ke tengah — bagian yang ketutup
@@ -75,6 +79,11 @@ html, body{ height:100%; overflow:hidden; } /* fixed page, no scroll needed */
 }
 @media (max-width:420px){
   .polaroid{ width:48px; border-radius:9px; padding:3px; }
+}
+
+/* foto di layer depan dikasih shadow lebih tegas biar berasa "melayang di atas" card */
+.photo-col.front .polaroid{
+  box-shadow:0 14px 26px rgba(74,59,71,0.32);
 }
 .polaroid img{
   width:100%;
