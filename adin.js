@@ -1,9 +1,12 @@
+// Semua foto otomatis dideteksi dari folder photos/
+// Syarat: nama file harus urut → foto1.jpg, foto2.jpg, foto3.jpg, dst.
+// Ganti MAX_CHECK kalau foto kamu lebih dari 50.
 const MAX_CHECK = 50;
-const PHOTO_FOLDER = 'image/';
-const PHOTO_PREFIX = 'image';
-const PHOTO_EXT = '.jpg'; 
+const PHOTO_FOLDER = 'photos/';
+const PHOTO_PREFIX = 'foto';
+const PHOTO_EXT = '.jpg'; // ganti ke '.png' / '.jpeg' kalau formatnya beda
 
-let placeholderPhotos = [];
+let placeholderPhotos = []; // diisi otomatis setelah deteksi selesai
 
 function detectPhotos(){
   return new Promise((resolve) => {
@@ -27,14 +30,17 @@ function detectPhotos(){
     }
 
     function finish(){
+      // urutkan sesuai nomor file, biar konsisten
       found.sort((a, b) => a.index - b.index);
       resolve(found.map(f => f.path));
     }
   });
 }
 
-const colLeft = document.getElementById('colLeft');
-const colRight = document.getElementById('colRight');
+const colLeftBack = document.getElementById('colLeftBack');
+const colRightBack = document.getElementById('colRightBack');
+const colLeftFront = document.getElementById('colLeftFront');
+const colRightFront = document.getElementById('colRightFront');
 
 let photoIndex = 0;
 
@@ -44,7 +50,19 @@ function nextPhoto(){
   return src;
 }
 
-function runLane(col, laneIndex, totalLanes){
+/**
+ * Setiap foto berjalan di "lane" (jalur) horizontal yang tetap miliknya sendiri.
+ * Karena posisi horizontal per lane gak berubah-ubah acak, dan bubble berikutnya
+ * di lane yang sama baru muncul setelah bubble sebelumnya "beres" naik + jeda,
+ * foto gak akan pernah numpuk satu sama lain — baik sesama lane maupun antar lane.
+ *
+ * backCol & frontCol adalah dua kemungkinan tempat foto ini dilahirkan — tiap kali
+ * spawn, dipilih acak salah satu, jadi fotonya kadang lewat di belakang card,
+ * kadang di depan card.
+ */
+function runLane(backCol, frontCol, laneIndex, totalLanes){
+  // posisi tiap lane dibagi rata di lebar kolom, dikasih sedikit jitter kecil
+  // (jitter dibatasi supaya gak nyerempet ke lane sebelah)
   const laneWidth = 100 / totalLanes;
   const laneCenter = laneWidth * laneIndex + laneWidth / 2;
   const jitterRange = laneWidth * 0.25;
@@ -57,7 +75,7 @@ function runLane(col, laneIndex, totalLanes){
     const jitter = (Math.random() * jitterRange * 2 - jitterRange);
     const left = Math.min(92, Math.max(0, laneCenter + jitter));
 
-    const duration = 13 + Math.random() * 7; // 13-20s naik
+    const duration = 10 + Math.random() * 6; // 10-16s naik — dipercepat biar lebih rame
     const depth = 0.3 + Math.random() * 0.7; // depth lebih ke arah "dekat" biar tetap kelihatan jelas
     const scale = (0.75 + depth * 0.5).toFixed(2);
     const blur = ((1 - depth) * 1.2).toFixed(2);
@@ -75,21 +93,26 @@ function runLane(col, laneIndex, totalLanes){
     el.style.animationIterationCount = '1'; // sekali naik, lalu dibuang & diganti bubble baru
     el.innerHTML = `<img src="${src}" alt="momen">`;
 
-    col.appendChild(el);
+    // acak: kali ini foto muncul di depan card atau di belakang card
+    const parent = Math.random() < 0.5 ? backCol : frontCol;
+    parent.appendChild(el);
 
-    const gap = 300 + Math.random() * 700;
+    // Setelah bubble ini selesai naik & hilang, baru lane ini boleh spawn bubble berikutnya.
+    // Jeda kecil (gap) ditambahkan supaya ada nafas sebelum bubble baru muncul dari bawah.
+    const gap = 150 + Math.random() * 350; // jeda dipersingkat biar spawn lebih intens
     setTimeout(() => {
       el.remove();
       spawnOnce();
     }, duration * 1000 + gap);
   }
 
-  setTimeout(spawnOnce, laneIndex * 700 + Math.random() * 500);
+  // delay awal biar tiap lane gak mulai barengan
+  setTimeout(spawnOnce, laneIndex * 400 + Math.random() * 400);
 }
 
-function startColumn(col, laneCount){
+function startColumn(backCol, frontCol, laneCount){
   for(let i = 0; i < laneCount; i++){
-    runLane(col, i, laneCount);
+    runLane(backCol, frontCol, i, laneCount);
   }
 }
 
@@ -97,10 +120,10 @@ function startColumn(col, laneCount){
 // bisa muat tanpa numpuk. Nilai ini juga yang bikin fotonya kerasa "lebih banyak".
 function getLaneCount(){
   const w = window.innerWidth;
-  if(w < 480) return 2;   // hp kecil
-  if(w < 768) return 3;   // hp besar / tablet kecil
-  if(w < 1100) return 4;  // tablet / laptop kecil
-  return 5;                // desktop lebar
+  if(w < 480) return 4;   // hp kecil
+  if(w < 768) return 5;   // hp besar / tablet kecil
+  if(w < 1100) return 7;  // tablet / laptop kecil
+  return 9;                // desktop lebar
 }
 
 // Deteksi dulu semua foto yang ada, baru mulai animasi
@@ -113,6 +136,6 @@ detectPhotos().then((photos) => {
   }
 
   const lanes = getLaneCount();
-  startColumn(colLeft, lanes);
-  startColumn(colRight, lanes);
+  startColumn(colLeftBack, colLeftFront, lanes);
+  startColumn(colRightBack, colRightFront, lanes);
 });
