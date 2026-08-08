@@ -94,7 +94,9 @@ function runLane(backCol, frontCol, laneIndex, totalLanes){
     el.innerHTML = `<img src="${src}" alt="momen">`;
 
     // acak: kali ini foto muncul di depan card atau di belakang card
-    const parent = Math.random() < 0.5 ? backCol : frontCol;
+    const isFront = Math.random() < 0.5;
+    const parent = isFront ? frontCol : backCol;
+    el.style.zIndex = isFront ? '999' : '5'; // dobel jaminan selain z-index di CSS container
     parent.appendChild(el);
 
     // Setelah bubble ini selesai naik & hilang, baru lane ini boleh spawn bubble berikutnya.
