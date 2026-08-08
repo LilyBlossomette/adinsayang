@@ -13,7 +13,7 @@ body{
   min-height:100vh;
   background:
     linear-gradient(rgba(253,246,236,0.35), rgba(253,246,236,0.35)),
-    url('assets/wallpaper.jpg');
+    url('assets/wallpaper.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -23,7 +23,7 @@ body{
   position:relative;
 }
 
-html, body{ height:100%; overflow:hidden; } 
+html, body{ height:100%; overflow:hidden; } /* fixed page, no scroll needed */
 
 .stage{
   position:relative;
@@ -31,6 +31,7 @@ html, body{ height:100%; overflow:hidden; }
   height:100vh;
 }
 
+/* ---- Floating photo columns ---- */
 .photo-col{
   position:fixed;
   top:0;
@@ -42,18 +43,19 @@ html, body{ height:100%; overflow:hidden; }
 .photo-col.left{ left:2%; }
 .photo-col.right{ right:2%; }
 
-@media (max-width:900px){
-  .photo-col{ width:110px; }
-  .photo-col.left{ left:1%; }
-  .photo-col.right{ right:1%; }
-}
-@media (max-width:640px){
-  .photo-col{ width:90px; }
-}
-@media (max-width:420px){
-  .photo-col{ width:70px; }
+/* Di layar sempit, kolom foto diperlebar supaya jalur (lane) tetap muat berjajar
+   tanpa numpuk, dan dibiarkan sedikit "masuk" ke tengah — bagian yang ketutup
+   card gak masalah karena card punya background solid, jadi teks tetap kebaca. */
+@media (max-width:1100px){
+  .photo-col{ width:38vw; }
   .photo-col.left{ left:0; }
   .photo-col.right{ right:0; }
+}
+@media (max-width:640px){
+  .photo-col{ width:44vw; }
+}
+@media (max-width:420px){
+  .photo-col{ width:48vw; }
 }
 
 .polaroid{
@@ -68,6 +70,12 @@ html, body{ height:100%; overflow:hidden; }
   animation-iteration-count: infinite;
   filter: blur(var(--blur, 0px));
 }
+@media (max-width:640px){
+  .polaroid{ width:58px; border-radius:10px; padding:4px; }
+}
+@media (max-width:420px){
+  .polaroid{ width:48px; border-radius:9px; padding:3px; }
+}
 .polaroid img{
   width:100%;
   aspect-ratio: 3 / 4;
@@ -76,6 +84,7 @@ html, body{ height:100%; overflow:hidden; }
   display:block;
 }
 
+/* bubble-like rise with gentle horizontal sway, like something drifting up through water */
 @keyframes floatUp{
   0%{
     transform: translate(0, 115vh) rotate(var(--rot,-4deg)) scale(var(--scale,1));
@@ -92,6 +101,7 @@ html, body{ height:100%; overflow:hidden; }
   }
 }
 
+/* ---- Center card ---- */
 .card-wrap{
   position:fixed;
   top:50%; left:50%;
