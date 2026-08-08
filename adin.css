@@ -13,7 +13,7 @@ body{
   min-height:100vh;
   background:
     linear-gradient(rgba(253,246,236,0.35), rgba(253,246,236,0.35)),
-    url('assets/wallpaper.png');
+    url('assets/wallpaper.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
